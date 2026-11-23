@@ -1,28 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>PrepMate</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    </head>
-    <body>
-        <h1>Welcome to PrepMate</h1>
-        <p>Your ultimate companion for exam preparation and study resources.</p>
-        <textarea id="topicInput" placeholder="Enter a topic.."></textarea>
-    <button id="ExplainButton">Explain</button>
-    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SasyaVaidya AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="app-shell">
+        <header class="chat-header">
+            <div class="brand">
+                <div class="bot-avatar">🌿</div>
+                <div class="brand-text">
+                    <h1>SasyaVaidya AI</h1>
+                    <span class="online-dot"></span><span class="online-text" data-i18n="online">Online</span>
+                </div>
+            </div>
 
-    <div id="result">
-        <!-- AI explanation will show here -->
-    </div>
+            <div class="header-controls">
+                <label class="control location-control">
+                    <span class="control-label" data-i18n="location">Location</span>
+                    <select id="locationSelect" aria-label="Location">
+                        <option value="Nilambur, Kerala">Nilambur, Kerala</option>
+                        <option value="Palakkad, Kerala">Palakkad, Kerala</option>
+                        <option value="Coimbatore, Tamil Nadu">Coimbatore, Tamil Nadu</option>
+                        <option value="Pune, Maharashtra">Pune, Maharashtra</option>
+                        <option value="custom">Custom city...</option>
+                    </select>
+                    <input id="customLocation" type="text" placeholder="Enter city" hidden>
+                </label>
 
-    <button id="downloadBtn" class="download-btn">Download Notes</button>
+                <label class="control">
+                    <span class="control-label" data-i18n="language">Language</span>
+                    <select id="languageSelect" aria-label="Language">
+                        <option value="English">English</option>
+                        <option value="Malayalam">മലയാളം</option>
+                        <option value="Hindi">हिन्दी</option>
+                        <option value="Tamil">தமிழ்</option>
+                        <option value="Kannada">ಕನ್ನಡ</option>
+                        <option value="Telugu">తెలుగు</option>
+                        <option value="Marathi">मराठी</option>
+                    </select>
+                </label>
+            </div>
+        </header>
 
+        <section id="chat" class="chat-window" aria-live="polite">
+            <div class="date-chip">Today</div>
+            <div class="message-row bot-row">
+                <div class="message bot-message">
+                    <div id="welcomeText">Hello! 🌿 Upload a photo of any plant, tree, crop, vegetable, stem, fruit, or leaf. I’ll identify health issues and suggest the safest treatment for your local weather.</div>
+                    <time id="welcomeTime"></time>
+                </div>
+            </div>
+        </section>
 
+        <div class="quick-actions" id="quickActions">
+            <button type="button" data-action="sample">📷 Try Sample Diseased Plant</button>
+            <button type="button" data-action="spray">🌦️ Spray advice</button>
+            <button type="button" data-action="organic">🍃 Organic treatment</button>
+        </div>
+
+        <footer class="composer">
+            <label class="upload-button" title="Upload plant image">
+                <input id="imageInput" type="file" accept="image/*" capture="environment" hidden>
+                <span aria-hidden="true">📷</span>
+            </label>
+            <input id="messageInput" type="text" placeholder="Ask about a plant, tree, crop, vegetable, stem, fruit, or leaf..." autocomplete="off">
+            <button id="sendButton" class="send-button" type="button" aria-label="Send">➤</button>
+        </footer>
+    </main>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-
-    </body>
+</body>
 </html>
