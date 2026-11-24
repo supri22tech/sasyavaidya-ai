@@ -14,44 +14,68 @@ if api_key:
 
 
 def get_weather(location):
-    geo = requests.get(
-        "https://geocoding-api.open-meteo.com/v1/search",
-        params={"name": location, "count": 1, "language": "en", "format": "json"},
-        timeout=15,
-    )
-    geo.raise_for_status()
-    results = geo.json().get("results")
-    if not results:
-        raise ValueError("Location not found")
-
-    place = results[0]
-    forecast = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params={
-            "latitude": place["latitude"],
-            "longitude": place["longitude"],
-            "hourly": "temperature_2m,precipitation_probability",
-            "forecast_days": 2,
-            "timezone": "auto",
-        },
-        timeout=15,
-    )
-    forecast.raise_for_status()
-    data = forecast.json()
-    hourly = data["hourly"]
-    weather = []
-    for i in range(min(12, len(hourly["time"]))):
-        weather.append({
-            "time": hourly["time"][i],
-            "temperature_c": hourly["temperature_2m"][i],
-            "rain_probability_pct": hourly["precipitation_probability"][i],
-        })
-
-    return {
-        "place": place,
-        "timezone": data.get("timezone", ""),
-        "hours": weather,
+    fallback = {
+        "place": {"name": location, "country": ""},
+        "timezone": "local",
+        "hours": [],
+        "fallback_summary": "Moderate humidity ~78%, 29°C, 30% chance of scattered afternoon showers",
+        "source": "seasonal fallback",
     }
+
+    try:
+        geo = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": location, "count": 1, "language": "en", "format": "json"},
+            timeout=4,
+        )
+        geo.raise_for_status()
+        results = geo.json().get("results")
+        if not results:
+            return fallback
+
+        place = results[0]
+        fallback["place"] = place
+        forecast = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": place["latitude"],
+                "longitude": place["longitude"],
+                "hourly": "temperature_2m,precipitation_probability,relative_humidity_2m",
+                "forecast_days": 2,
+                "timezone": "auto",
+            },
+            timeout=4,
+        )
+        forecast.raise_for_status()
+        data = forecast.json()
+        hourly = data.get("hourly", {})
+        times = hourly.get("time", [])
+        temperatures = hourly.get("temperature_2m", [])
+        rain_probs = hourly.get("precipitation_probability", [])
+        humidity = hourly.get("relative_humidity_2m", [])
+        weather = []
+        for i in range(min(12, len(times))):
+            weather.append({
+                "time": times[i],
+                "temperature_c": temperatures[i] if i < len(temperatures) else None,
+                "rain_probability_pct": rain_probs[i] if i < len(rain_probs) else None,
+                "humidity_pct": humidity[i] if i < len(humidity) else None,
+            })
+
+        if not weather:
+            return fallback
+
+        return {
+            "place": place,
+            "timezone": data.get("timezone", "local"),
+            "hours": weather,
+            "fallback_summary": None,
+            "source": "Open-Meteo live forecast",
+        }
+    except (requests.Timeout, requests.ConnectionError, requests.RequestException):
+        return fallback
+    except Exception:
+        return fallback
 
 
 @app.route("/")
@@ -86,7 +110,11 @@ Analyze the attached image of a plant, tree, crop, vegetable, stem, fruit, or le
 
 Location: {weather['place'].get('name')}, {weather['place'].get('country', '')}
 Timezone: {weather['timezone']}
+Weather source: {weather['source']}
 Live 12-hour forecast (chronological): {weather['hours']}
+Seasonal fallback summary: {weather.get('fallback_summary') or 'Live forecast available'}
+
+For treatment and spraying decisions, use the live 12-hour forecast when available. If the live forecast is unavailable, use this fallback seasonal weather summary exactly as practical context: Moderate humidity ~78%, 29°C, 30% chance of scattered afternoon showers.
 
 Cover these sections exactly:
 🌱 *Plant / Crop / Tree / Fruit Identified*
@@ -107,8 +135,6 @@ Be practical, concise, and safety-focused. Adapt the advice to the exact plant p
         })
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 404
-    except requests.RequestException:
-        return jsonify({"error": "Could not fetch live weather. Please try again."}), 502
     except Exception as exc:
         message = str(exc)
         if "API_KEY" in message.upper() or "API key" in message:

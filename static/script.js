@@ -112,10 +112,18 @@ async function analyze(question) {
   showTyping();
   document.getElementById("sendButton").disabled = true;
   try {
-    const response = await fetch("/generate", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({image:pendingImage,mimeType:"image/png",language:languageSelect.value,location,question})
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    let response;
+    try {
+      response = await fetch("/generate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({image:pendingImage,mimeType:"image/png",language:languageSelect.value,location,question}),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const data = await response.json();
     hideTyping();
     if (!response.ok) throw new Error(data.error || "Analysis failed");
